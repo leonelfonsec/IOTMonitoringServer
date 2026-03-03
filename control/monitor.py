@@ -1,6 +1,6 @@
 from argparse import ArgumentError
 import ssl
-from django.db.models import Avg
+from django.db.models import Avg, Max
 from datetime import timedelta, datetime
 from receiver.models import Data, Measurement
 import paho.mqtt.client as mqtt
@@ -59,6 +59,43 @@ def analyze_data():
     print(alerts, "alertas enviadas")
 
 
+def analyze_critical_temp():
+    # Condición: Si la temperatura máxima en los últimos 15 min supera los 35°C
+    print("Calculando alertas críticas de temperatura...")
+
+    data = Data.objects.filter(
+        measurement__name__icontains='temperatura',
+        base_time__gte=datetime.now() - timedelta(minutes=15)
+    )
+    
+    aggregation = data.values(
+        'station__user__username',
+        'station__location__country__name',
+        'station__location__state__name',
+        'station__location__city__name'
+    ).annotate(max_temp=Max('max_value'))
+    
+    alerts = 0
+    for item in aggregation:
+        # Condición: Evaluamos si excede nuestro límite crítico (ej. 35°C)
+        if item['max_temp'] is not None and item['max_temp'] >= 35.0:
+            country = item['station__location__country__name']
+            state = item['station__location__state__name']
+            city = item['station__location__city__name']
+            user = item['station__user__username']
+            
+            # Acción: Enviar un comando para encender el LED del dispositivo
+            message = "LED_ON"
+            topic = '{}/{}/{}/{}/in'.format(country, state, city, user)
+            
+            print(datetime.now(), "Enviando comando CRITICO a {}".format(topic))
+            client.publish(topic, message)
+            alerts += 1
+            
+    print(len(aggregation), "dispositivos revisados para temp crítica")
+    print(alerts, "comandos LED_ON enviados")
+
+
 def on_connect(client, userdata, flags, rc):
     '''
     Función que se ejecuta cuando se conecta al bróker.
@@ -102,10 +139,12 @@ def setup_mqtt():
 
 def start_cron():
     '''
-    Inicia el cron que se encarga de ejecutar la función analyze_data cada 5 minutos.
+    Inicia el cron que se encarga de ejecutar la función analyze_data cada 5 minutos
+    y analyze_critical_temp cada 2 minutos.
     '''
     print("Iniciando cron...")
     schedule.every(5).minutes.do(analyze_data)
+    schedule.every(2).minutes.do(analyze_critical_temp)
     print("Servicio de control iniciado")
     while 1:
         schedule.run_pending()
