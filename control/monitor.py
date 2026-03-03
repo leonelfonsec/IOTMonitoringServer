@@ -73,7 +73,7 @@ def analyze_critical_temp():
         'station__location__country__name',
         'station__location__state__name',
         'station__location__city__name'
-    ).annotate(max_temp=Max('max_value'))
+    ).annotate(max_temp=Max('avg_value'))
     
     alerts = 0
     for item in aggregation:
