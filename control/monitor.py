@@ -78,7 +78,7 @@ def analyze_critical_temp():
     alerts = 0
     for item in aggregation:
         # Condición: Evaluamos si excede nuestro límite crítico (ej. 35°C)
-        if item['max_temp'] is not None and item['max_temp'] >= 35.0:
+        if item['max_temp'] is not None and item['max_temp'] >= 20.0:
             country = item['station__location__country__name']
             state = item['station__location__state__name']
             city = item['station__location__city__name']
