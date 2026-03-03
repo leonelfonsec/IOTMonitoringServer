@@ -159,7 +159,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 MQTT_HOST = "10.0.11.254"
 
 # Puerto del bróker MQTT
-MQTT_PORT = 8082
+MQTT_PORT = 1883
 
 # Credenciales para el usuario suscriptor del bróker MQTT
 MQTT_USER = "admin"
